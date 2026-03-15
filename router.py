@@ -160,17 +160,39 @@ def _predict_madrid():
     with torch.no_grad():
         pred_norm = m(inp, L_t)[0].numpy()
 
-    pred_ica = np.clip(pred_norm * y_std + y_mean, 0, 500)
+    # Iterative prediction: roll the model forward for up to 24 steps
+    N_PRED = 24
+    # Start from the current feature window
+    X_window = X_norm[-lookback:].copy()   # (lookback, N, F)
+    all_ica_pred = []                        # will be list of N_PRED arrays (N,)
+
+    m.eval()
+    for _ in range(N_PRED):
+        inp_t = torch.tensor(X_window[np.newaxis], dtype=torch.float32)
+        with torch.no_grad():
+            pred_norm_step = m(inp_t, L_t)[0].numpy()    # (N, 1) or (N,)
+        if pred_norm_step.ndim == 2:
+            pred_norm_step = pred_norm_step[:, 0]        # (N,)
+        ica_step = np.clip(pred_norm_step * y_std + y_mean, 0, 500)
+        all_ica_pred.append(ica_step)
+
+        # Roll window: drop oldest step, append new step
+        new_feat = X_window[-1].copy()         # (N, F)
+        new_feat[:, -1] = ica_step / (y_std + 1e-8)  # update ICA feature (normalised approx)
+        X_window = np.concatenate([X_window[1:], new_feat[np.newaxis]], axis=0)
+
+    ica_24h_all = np.stack(all_ica_pred, axis=1)   # (N, 24)
+
     stations = _STATIONS_CIUDAD["madrid"]
     results = []
     for i, st in enumerate(stations):
         ica_actual = float(y_ica[-1, i])
-        ica_24h = [round(float(pred_ica[i, h]), 1) for h in range(horizon)]
+        ica_h = [round(float(ica_24h_all[i, h]), 1) for h in range(N_PRED)]
         results.append({**st, "ica_actual": round(ica_actual, 1),
                         "ica_categoria": _ica_categoria(ica_actual),
-                        "ica_prediccion_24h": ica_24h,
-                        "ica_max_24h": round(max(ica_24h), 1),
-                        "ica_max_categoria": _ica_categoria(max(ica_24h))})
+                        "ica_prediccion_24h": ica_h,
+                        "ica_max_24h": round(max(ica_h), 1),
+                        "ica_max_categoria": _ica_categoria(max(ica_h))})
     return results
 
 
