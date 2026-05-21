@@ -25,6 +25,8 @@ app.add_middleware(
 
 from router import router
 app.include_router(router)
+from diagnostics import router as diagnostics_router
+app.include_router(diagnostics_router)
 
 
 @app.get("/")
