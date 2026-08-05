@@ -170,3 +170,52 @@ uvicorn api:app --host 127.0.0.1 --port 8091 --reload
 ---
 
 *Parte del portafolio de proyectos IA/ML — [adrianmoreno-dev.com](https://adrianmoreno-dev.com)*
+
+
+## Integración, datos y licencia
+
+**Licencia:** MIT (ver [LICENSE](LICENSE)) — uso libre, incluido comercial,
+manteniendo el aviso de copyright. Sin garantía ni soporte incluidos.
+
+### Formatos estándar de salida
+
+Además del JSON propio, la predicción se sirve en dos formatos que las
+plataformas del sector ya consumen, para no obligar a nadie a programar contra
+un esquema propietario:
+
+| Formato | Endpoint | Para qué |
+|---|---|---|
+| **NGSI-LD** (ETSI CIM 009, modelo `AirQualityObserved` de FIWARE Smart Data Models) | `GET /ml/calidad-aire/ngsi-ld` | Volcado directo a un Context Broker (Orion-LD, Scorpio, Stellio) de una plataforma de ciudad inteligente |
+| **GeoJSON** (RFC 7946) | `GET /ml/calidad-aire/geojson` | Cargar en QGIS, ArcGIS, Leaflet o Mapbox sin conversión |
+
+```bash
+# Alta/actualización en un Context Broker NGSI-LD
+curl -s http://localhost:8091/ml/calidad-aire/ngsi-ld?ciudad=madrid > entidades.json
+curl -X POST "$BROKER/ngsi-ld/v1/entityOperations/upsert" \
+     -H 'Content-Type: application/ld+json' -d @entidades.json
+
+# Capa GeoJSON directa en un mapa
+curl "http://localhost:8091/ml/calidad-aire/geojson?ciudad=madrid" -o estaciones.geojson
+```
+
+Ambos se generan a partir de la misma predicción que sirve `/estaciones`, así que
+no puede haber discrepancias entre formatos. La predicción a 24 h viaja en el
+atributo propio `airQualityIndexForecast` (el modelo estándar no la contempla),
+declarado como tal para que quede claro qué es estándar y qué es extensión.
+
+### Tratamiento de datos
+
+No hay datos personales en ningún punto: el servicio trabaja con estaciones de
+medición y valores agregados. No se almacenan peticiones ni se registra quién
+consulta.
+
+**Qué sale del servidor:** nada. **Este proyecto no usa ningún proveedor de IA
+externo** — el modelo (DCRNN-lite en PyTorch) se ejecuta localmente. Funciona
+sin conexión a internet y sin ninguna clave de API.
+
+### Despliegue propio y costes
+
+El repositorio es la aplicación completa (FastAPI + systemd + modelo entrenado).
+Se despliega en infraestructura propia sin dependencias SaaS. El código es
+gratuito (MIT); los costes son la infraestructura y el mantenimiento, a cargo de
+quien lo despliega — el autor no ofrece soporte ni consultoría.

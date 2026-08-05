@@ -4,6 +4,7 @@ import json, math, datetime
 from pathlib import Path
 import numpy as np, joblib, torch
 from fastapi import APIRouter, Query
+from fastapi.responses import JSONResponse
 
 ARTIFACTS = Path(__file__).parent / "artifacts"
 router = APIRouter(prefix="/ml")
@@ -294,6 +295,29 @@ def estaciones(ciudad: str = Query("madrid")):
         return {"ok": True, "ciudad": ciudad, "estaciones": _predict(ciudad)}
     except Exception as e:
         return {"ok": False, "error": str(e)}
+
+@router.get("/calidad-aire/ngsi-ld")
+def ngsi_ld(ciudad: str = Query("madrid")):
+    """Predicción como entidades NGSI-LD `AirQualityObserved` (FIWARE Smart
+    Data Models). Volcable directamente a un Context Broker Orion-LD/Scorpio.
+
+    Devuelve la lista desnuda (no envuelta en {"ok":...}) porque eso es lo que
+    espera `POST /ngsi-ld/v1/entityOperations/upsert`."""
+    from interop import to_ngsi_ld
+    entities = to_ngsi_ld(_predict(ciudad), ciudad)
+    return JSONResponse(content=entities, media_type="application/ld+json")
+
+
+@router.get("/calidad-aire/geojson")
+def geojson(ciudad: str = Query("madrid")):
+    """Estaciones y su predicción como GeoJSON RFC 7946, para cargar en QGIS,
+    ArcGIS, Leaflet o Mapbox sin conversión intermedia."""
+    from interop import to_geojson
+    return JSONResponse(
+        content=to_geojson(_predict(ciudad), ciudad),
+        media_type="application/geo+json",
+    )
+
 
 @router.get("/calidad-aire/stats")
 def stats():
