@@ -203,6 +203,34 @@ no puede haber discrepancias entre formatos. La predicción a 24 h viaja en el
 atributo propio `airQualityIndexForecast` (el modelo estándar no la contempla),
 declarado como tal para que quede claro qué es estándar y qué es extensión.
 
+### Home Assistant (MQTT)
+
+`mqtt_publish.py` publica la predicción en un broker MQTT con
+**autodescubrimiento de Home Assistant**: cada estación aparece como sensor sin
+tocar `configuration.yaml`.
+
+```bash
+pip install paho-mqtt          # dependencia sólo de este script
+
+python mqtt_publish.py --host 192.168.1.50 --ciudad madrid
+python mqtt_publish.py --host broker --port 8883 --tls --user ha --password ***
+python mqtt_publish.py --host x --dry-run     # ver qué se enviaría, sin publicar
+```
+
+| Topic | Contenido |
+|---|---|
+| `homeassistant/sensor/calidad_aire_<ciudad>_<estación>/config` | Config de descubrimiento (*retained*) |
+| `calidad_aire/<ciudad>/<estación>/state` | `ica_actual`, `categoria`, `ica_max_24h`, coordenadas |
+
+Las estaciones de una ciudad se agrupan bajo un mismo *device* en la UI de Home
+Assistant. Con eso se pueden montar automatismos del tipo «cierra la ventilación
+si `ica_max_24h` supera X».
+
+**Es un script, no un hilo del servicio, a propósito:** esta API arranca bajo
+demanda y se apaga tras 30 min sin tráfico, así que un publicador continuo
+integrado moriría con ella. Como script, se programa por cron en la
+infraestructura del integrador, junto a su broker.
+
 ### Tratamiento de datos
 
 No hay datos personales en ningún punto: el servicio trabaja con estaciones de
