@@ -6,6 +6,34 @@ Demo en producción: [adrianmoreno-dev.com/demo/prediccion-calidad-aire](https:/
 
 ---
 
+<!-- LOOP-MAP:START (generado por `php artisan project:loop readme` — no editar a mano) -->
+
+## El bucle que cierra
+
+<p align="center"><img src="https://adrianmoreno-dev.com/bucle/prediccion-calidad-aire.svg" alt="Mapa del bucle de Predicción de Calidad del Aire" width="900"></p>
+
+**Para** quien vigila la calidad del aire de Madrid · **Cada día**
+
+| Etapa | Qué pasa | Quién |
+|---|---|---|
+| **1. Disparador** | Necesito saber si mañana habrá un episodio de contaminación en la ciudad. | persona |
+| **2. Acción** | Propaga las lecturas entre las 24 estaciones vecinas como un grafo y predice el índice de cada una a 24 horas. | software |
+| **3. Medición** | La categoría ICA prevista por estación, con un error medio de ±2,8 puntos de índice. | software |
+| **4. Decisión** | Decido si aviso, si se activa el protocolo o si no hace falta hacer nada. | persona |
+
+### Lo que no hace
+
+- Solo cubre Madrid: el grafo son las 24 estaciones de la ciudad, no otras redes.
+- No pasa de 24 horas: el horizonte de la predicción es un día.
+- No mide nada: consume las lecturas de las estaciones, no sustituye a un sensor.
+
+### Por qué está construido así
+
+- **Las estaciones, como grafo** en vez de una serie temporal independiente por estación — La contaminación viaja entre estaciones vecinas. Una serie aislada no ve venir el episodio que ya está en la estación de al lado.
+- **Servir en NGSI-LD y GeoJSON** en vez de un JSON con formato propio — Son los formatos que ya hablan las plataformas de ciudad y los visores de mapas, así que se conecta sin escribir un adaptador.
+
+<!-- LOOP-MAP:END -->
+
 ## Resultados
 
 | Métrica | Valor |
