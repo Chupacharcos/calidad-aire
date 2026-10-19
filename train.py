@@ -212,7 +212,7 @@ def parse_madrid_csv(df_raw: pd.DataFrame) -> pd.DataFrame:
 
         for hcol in hour_cols:
             try:
-                hour = int(hcol[1:])
+                hour = int(hcol[1:]) - 1  # H01 → hora 0
                 val_col = hcol
                 valid_col = 'V' + hcol[1:]
 
